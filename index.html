@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>پرسش‌نامه روانشناختی | WebLegend Project</title>
+    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        :root {
+            --bg-color: #0f0f13; /* مشکی عمیق */
+            --card-bg: rgba(30, 30, 35, 0.7); /* شیشه‌ای تیره */
+            --primary-silver: #e0e0e0;
+            --accent-silver: #a0a0a0;
+            --highlight: #ffffff;
+            --text-main: #f5f5f5;
+            --text-muted: #888888;
+            --transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Vazirmatn', sans-serif;
+            background-color: var(--bg-color);
+            background-image: radial-gradient(circle at 50% 0%, #2a2a2a 0%, var(--bg-color) 80%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        /* کانتینر اصلی */
+        .container {
+            width: 100%;
+            max-width: 700px;
+            background: var(--card-bg);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            position: relative;
+            margin: 20px;
+        }
+
+        /* نوار پیشرفت */
+        .progress-container {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100%;
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px 20px 0 0;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-silver), var(--highlight));
+            width: 0%;
+            transition: width 0.5s ease;
+            box-shadow: 0 0 10px var(--highlight);
+        }
+
+        /* تایپوگرافی */
+        h1, h2 {
+            text-align: center;
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: linear-gradient(to bottom, #fff, #aaa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 30px;
+        }
+
+        /* مراحل فرم */
+        .step {
+            display: none;
+            animation: fadeIn 0.6s ease;
+        }
+
+        .step.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* استایل ورودی‌ها */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--primary-silver);
+            font-size: 0.95rem;
+        }
+
+        input[type="number"], select {
+            width: 100%;
+            padding: 12px 15px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            color: #fff;
+            font-family: inherit;
+            transition: var(--transition);
+        }
+
+        input[type="number"]:focus, select:focus {
+            border-color: var(--primary-silver);
+            background: rgba(255,255,255,0.1);
+        }
+
+        /* --- استایل گزینه‌های داخل سلکت --- */
+        select {
+            background-color: rgba(255,255,255,0.05);
+            color: #fff;
+        }
+        
+        select option {
+            background-color: #1a1a1a !important;
+            color: #fff !important;
+            padding: 10px;
+        }
+
+        /* استایل سوالات */
+        .question-card {
+            background: rgba(255,255,255,0.03);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border-right: 3px solid transparent;
+            transition: var(--transition);
+        }
+
+        .question-card:hover {
+            background: rgba(255,255,255,0.06);
+            border-right-color: var(--accent-silver);
+        }
+
+        .question-text {
+            font-size: 1rem;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+
+        .options {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .option-label {
+            flex: 1;
+            position: relative;
+            cursor: pointer;
+            min-width: 80px;
+        }
+
+        .option-label input {
+            position: absolute;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .option-custom {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            transition: var(--transition);
+            text-align: center;
+        }
+
+        .option-label input:checked ~ .option-custom {
+            background: var(--primary-silver);
+            color: #000;
+            font-weight: bold;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        /* دکمه‌ها */
+        .btn-group {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 50px;
+            font-family: inherit;
+            font-weight: bold;
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 1rem;
+        }
+
+        .btn-next {
+            background: linear-gradient(135deg, var(--primary-silver), #888);
+            color: #1a1a1a;
+            box-shadow: 0 4px 15px rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-next:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-prev {
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .btn-prev:hover {
+            color: #fff;
+            border-color: #fff;
+        }
+
+        /* ریسپانسیو */
+        @media (max-width: 600px) {
+            .container { padding: 25px 20px; margin: 10px; }
+            .options { flex-direction: column; }
+            .option-custom { padding: 12px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="progress-container">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+
+        <form id="surveyForm" onsubmit="return false;">
+            
+            <div class="step active" id="step-0">
+                <h1>خوش‌آمدید</h1>
+                <p class="subtitle">مطالعه رابطه تصویر بدنی با عزت نفس دانشجویان</p>
+                <div style="text-align: justify; margin-bottom: 30px; color: #ccc; line-height: 1.8;">
+                    <p>دانشجوی گرامی،</p>
+                    <p>این پرسش‌نامه جهت انجام پایان‌نامه کارشناسی ارشد طراحی شده است. هدف ما بررسی علمی رابطه بین احساس شما نسبت به بدنتان و عزت نفس شماست.</p>
+                    <p>🔴 <strong>توجه:</strong> تمام اطلاعات شما کاملاً <strong>محرمانه</strong> و بدون نام باقی می‌ماند.</p>
+                    <p>⏱ زمان مورد نیاز: حدود ۵ دقیقه</p>
+                </div>
+                <div style="text-align: center;">
+                    <button type="button" class="btn btn-next" onclick="nextStep()">شروع پرسش‌نامه</button>
+                </div>
+            </div>
+
+            <div class="step" id="step-1">
+                <h2>اطلاعات عمومی</h2>
+                <p class="subtitle">لطفاً مشخصات زیر را وارد کنید</p>
+                
+                <div class="form-group">
+                    <label>جنسیت</label>
+                    <select id="gender" required>
+                        <option value="" disabled selected>انتخاب کنید...</option>
+                        <option value="female">زن</option>
+                        <option value="male">مرد</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>سن</label>
+                    <input type="number" id="age" placeholder="مثلاً 22">
+                </div>
+
+                <div class="form-group">
+                    <label>مقطع تحصیلی</label>
+                    <select id="education">
+                        <option value="" disabled selected>انتخاب کنید...</option>
+                        <option value="bachelor">کارشناسی</option>
+                        <option value="master">کارشناسی ارشد</option>
+                        <option value="phd">دکتری</option>
+                    </select>
+                </div>
+
+                <div class="btn-group">
+                    <button type="button" class="btn btn-prev" onclick="prevStep()">بازگشت</button>
+                    <button type="button" class="btn btn-next" onclick="nextStep()">مرحله بعد</button>
+                </div>
+            </div>
+
+            <div class="step" id="step-2">
+                <h2>بخش اول: خودارزشمندی</h2>
+                <p class="subtitle">لطفاً میزان موافقت خود را با جملات زیر مشخص کنید</p>
+                
+                <div id="rosenberg-container"></div>
+
+                <div class="btn-group">
+                    <button type="button" class="btn btn-prev" onclick="prevStep()">بازگشت</button>
+                    <button type="button" class="btn btn-next" onclick="nextStep()">مرحله بعد</button>
+                </div>
+            </div>
+
+            <div class="step" id="step-3">
+                <h2>بخش دوم: تصویر بدنی</h2>
+                <p class="subtitle">احساس شما نسبت به ظاهرتان</p>
+                
+                <div id="bodyimage-container"></div>
+
+                <div class="btn-group">
+                    <button type="button" class="btn btn-prev" onclick="prevStep()">بازگشت</button>
+                    <button type="button" class="btn btn-next" onclick="submitForm()">ثبت نهایی</button>
+                </div>
+            </div>
+
+            <div class="step" id="step-4" style="text-align: center;">
+                <h1 style="color: var(--highlight);">سپاسگزاریم!</h1>
+                <p class="subtitle">اطلاعات شما با موفقیت در سیستم ثبت شد.</p>
+                <div style="font-size: 50px; margin: 30px 0;">💎</div>
+                <p style="color: #aaa;">می‌توانید این صفحه را ببندید.</p>
+            </div>
+
+        </form>
+    </div>
+
+    <script>
+        // --- 1. تنظیمات و داده‌ها ---
+        const SUPABASE_URL = 'https://myefghnvegupqrvwfhua.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im15ZWZnaG52ZWd1cHFydndmaHVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU5ODg5NzMsImV4cCI6MjA4MTU2NDk3M30.oiDNiI1hEo6xN_p1yBYwBcCXzQj6FhDXAwTnD4vPs7k';
+        
+        // جلوگیری از تداخل نام‌گذاری
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const rosenbergQuestions = [
+            "روی هم رفته، از خودم رضایت دارم.",
+            "گاهی فکر می‌کنم اصلاً آدم خوبی نیستم.",
+            "فکر می‌کنم ویژگی‌های مثبت زیادی دارم.",
+            "من هم می‌توانم مثل بیشتر مردم کارها را به خوبی انجام دهم.",
+            "فکر می‌کنم چیز زیادی ندارم که به آن افتخار کنم.",
+            "گاهی واقعاً احساس می‌کنم که آدم بی‌فایده‌ای هستم.",
+            "فکر می‌کنم من شخص با ارزشی هستم، حداقل مساوی با دیگران.",
+            "کاش می‌توانستم احترام بیشتری برای خودم قائل باشم.",
+            "با همه این‌ها، فکر می‌کنم که آدم شکست‌خورده‌ای هستم.",
+            "نسبت به خودم نگرش مثبتی دارم."
+        ];
+
+        const bodyImageQuestions = [
+            "من از ظاهر خودم راضی هستم.",
+            "من خودم را از نظر فیزیکی جذاب می‌دانم.",
+            "اکثر مردم من را خوش‌قیافه/خوش‌تیپ می‌دانند.",
+            "من از لباسی که می‌پوشم لذت می‌برم.",
+            "ظاهر من نسبت به دیگران در سطح بالایی است.",
+            "من زمان زیادی را صرف آراستن ظاهر خود می‌کنم.",
+            "برای من خیلی مهم است که در هر موقعیتی چطور به نظر برسم.",
+            "من همیشه سعی می‌کنم عیوب ظاهری‌ام را بپوشانم.",
+            "قبل از بیرون رفتن از خانه، بارها خودم را در آینه چک می‌کنم.",
+            "رضایت از رنگ و کیفیت پوست.",
+            "رضایت از ویژگی‌های چهره (چشم، بینی، لب و...).",
+            "رضایت از تناسب کلی اندام و وزن.",
+            "رضایت از قد.",
+            "رضایت از موهای سر.",
+            "رضایت از عضلات و فرم کلی بدن."
+        ];
+
+        let currentStep = 0;
+        const totalSteps = 4;
+
+        // --- 2. راه‌اندازی اولیه ---
+        document.addEventListener('DOMContentLoaded', () => {
+            renderQuestions('rosenberg-container', rosenbergQuestions, 'q_rosen_', ['کاملاً مخالفم', 'مخالفم', 'موافقم', 'کاملاً موافقم']);
+            renderQuestions('bodyimage-container', bodyImageQuestions, 'q_body_', ['خیلی کم', 'کم', 'متوسط', 'زیاد', 'خیلی زیاد']);
+            updateUI();
+        });
+
+        // --- 3. توابع نمایشگر سوالات ---
+        function renderQuestions(containerId, questions, prefix, options) {
+            const container = document.getElementById(containerId);
+            let html = '';
+
+            questions.forEach((q, index) => {
+                const qId = index + 1;
+                html += `
+                    <div class="question-card">
+                        <div class="question-text"><span style="color:var(--accent-silver)">${qId}.</span> ${q}</div>
+                        <div class="options">
+                            ${options.map((opt, i) => `
+                                <label class="option-label">
+                                    <input type="radio" name="${prefix}${qId}" value="${i + 1}">
+                                    <div class="option-custom">${opt}</div>
+                                </label>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // --- 4. منطق جابجایی بین صفحات ---
+        function nextStep() {
+            if (!validateStep(currentStep)) return;
+            
+            if (currentStep < totalSteps) {
+                currentStep++;
+                updateUI();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 0) {
+                currentStep--;
+                updateUI();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        function updateUI() {
+            document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
+            document.getElementById(`step-${currentStep}`).classList.add('active');
+            
+            const progress = (currentStep / totalSteps) * 100;
+            document.getElementById('progressBar').style.width = `${progress}%`;
+        }
+
+        // --- 5. اعتبارسنجی ---
+        function validateStep(step) {
+            if (step === 1) { // دموگرافیک
+                const gender = document.getElementById('gender').value;
+                const age = document.getElementById('age').value;
+                if (!gender || !age) {
+                    alert('لطفاً جنسیت و سن خود را وارد کنید.');
+                    return false;
+                }
+            }
+            if (step === 2) { // روزنبرگ
+                if (!checkAllAnswered(rosenbergQuestions.length, 'q_rosen_')) {
+                    alert('لطفاً به تمام سوالات این بخش پاسخ دهید.');
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        function checkAllAnswered(count, prefix) {
+            for (let i = 1; i <= count; i++) {
+                const name = `${prefix}${i}`;
+                const checked = document.querySelector(`input[name="${name}"]:checked`);
+                if (!checked) return false;
+            }
+            return true;
+        }
+
+        // --- 6. ارسال نهایی به Supabase (با دیباگ دقیق) ---
+        async function submitForm() {
+            if (!checkAllAnswered(bodyImageQuestions.length, 'q_body_')) {
+                alert('لطفاً به تمام سوالات پاسخ دهید.');
+                return;
+            }
+
+            const btn = document.querySelector('.btn-next');
+            const originalText = btn.innerText;
+            btn.innerText = 'در حال ارسال...';
+            btn.disabled = true;
+
+            // اصلاح فرمت سن (تبدیل به عدد صحیح)
+            const ageInput = document.getElementById('age').value;
+            const ageNumber = parseInt(ageInput);
+            
+            if (isNaN(ageNumber)) {
+                alert('خطا: لطفاً سن را به صورت عدد انگلیسی وارد کنید.');
+                btn.innerText = originalText;
+                btn.disabled = false;
+                return;
+            }
+
+            // آماده‌سازی داده‌ها
+            const formData = {
+                gender: document.getElementById('gender').value,
+                age: ageNumber, // ارسال عدد مطمئن
+                education: document.getElementById('education').value,
+                rosenberg_raw: getAnswers(rosenbergQuestions.length, 'q_rosen_'),
+                body_image_raw: getAnswers(bodyImageQuestions.length, 'q_body_')
+            };
+
+            console.log("داده‌های در حال ارسال:", formData);
+
+            try {
+                // ارسال به Supabase
+                const { data, error } = await supabaseClient
+                    .from('responses')
+                    .insert([formData]);
+
+                if (error) {
+                    console.error('Supabase Error Detail:', error);
+                    // نمایش پیام دقیق ارور دیتابیس به کاربر
+                    throw new Error(error.message || "خطای ناشناخته در دیتابیس");
+                }
+
+                // موفقیت
+                currentStep++;
+                updateUI();
+                
+            } catch (err) {
+                console.error('Full Error:', err);
+                alert('❌ خطا در ثبت اطلاعات: \n' + err.message + '\n\n(لطفاً این پیام را بررسی کنید)');
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // تابع کمکی دریافت پاسخ‌ها
+        function getAnswers(count, prefix) {
+            let answers = [];
+            for (let i = 1; i <= count; i++) {
+                const val = document.querySelector(`input[name="${prefix}${i}"]:checked`).value;
+                answers.push(parseInt(val));
+            }
+            return answers;
+        }
+    </script>
+</body>
+</html>
