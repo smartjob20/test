@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>پنل مدیریت | خروجی اکسل</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+    
+    <style>
+        body { font-family: sans-serif; background: #f0f0f0; padding: 50px; text-align: center; }
+        .card { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); max-width: 500px; margin: 0 auto; }
+        button { background: #2ecc71; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 8px; cursor: pointer; }
+        button:hover { background: #27ae60; }
+        #status { margin-top: 20px; color: #555; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>پنل مدیریت داده‌ها</h1>
+        <p>تعداد رکوردها را بررسی و خروجی اکسل دریافت کنید.</p>
+        <button onclick="downloadExcel()">دانلود فایل اکسل تحلیل شده</button>
+        <div id="status"></div>
+    </div>
+
+    <script>
+        // همان تنظیمات اتصال
+        const SUPABASE_URL = 'https://myefghnvegupqrvwfhua.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im15ZWZnaG52ZWd1cHFydndmaHVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU5ODg5NzMsImV4cCI6MjA4MTU2NDk3M30.oiDNiI1hEo6xN_p1yBYwBcCXzQj6FhDXAwTnD4vPs7k';
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // ایندکس سوالات معکوس در روزنبرگ (سوال 2, 5, 6, 8, 9)
+        // توجه: چون آرایه از 0 شروع می‌شود، اعداد یکی کم می‌شوند (1, 4, 5, 7, 8)
+        const REVERSE_INDEXES = [1, 4, 5, 7, 8];
+
+        async function downloadExcel() {
+            const status = document.getElementById('status');
+            status.innerText = 'در حال دریافت داده‌ها از سرور...';
+
+            // 1. دریافت داده‌ها
+            const { data: responses, error } = await supabase
+                .from('responses')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                status.innerText = 'خطا: ' + error.message;
+                return;
+            }
+
+            if (responses.length === 0) {
+                status.innerText = 'هیچ داده‌ای یافت نشد!';
+                return;
+            }
+
+            status.innerText = `در حال پردازش ${responses.length} رکورد...`;
+
+            // 2. پردازش و مسطح کردن داده‌ها (Flattening)
+            const processedData = responses.map(row => {
+                
+                // محاسبه نمره روزنبرگ
+                let rosenbergScore = 0;
+                let rosenbergColumns = {};
+                
+                row.rosenberg_raw.forEach((score, index) => {
+                    let finalScore = score;
+                    // اگر سوال معکوس است، نمره را برگردان (1->4, 2->3, 3->2, 4->1)
+                    if (REVERSE_INDEXES.includes(index)) {
+                        finalScore = 5 - score; 
+                    }
+                    rosenbergScore += finalScore;
+                    
+                    // ساخت ستون‌های جداگانه برای هر سوال در اکسل (Q1, Q2...)
+                    rosenbergColumns[`R_Q${index + 1}`] = finalScore;
+                });
+
+                // محاسبه نمره تصویر بدنی
+                let bodyImageSum = 0;
+                let bodyImageColumns = {};
+                row.body_image_raw.forEach((score, index) => {
+                    bodyImageSum += score;
+                    bodyImageColumns[`BI_Q${index + 1}`] = score;
+                });
+
+                // خروجی تمیز برای هر ردیف اکسل
+                return {
+                    ID: row.id,
+                    Date: new Date(row.created_at).toLocaleDateString('fa-IR'),
+                    Gender: row.gender === 'female' ? 'زن' : 'مرد',
+                    Age: row.age,
+                    Education: row.education,
+                    
+                    ...rosenbergColumns, // ستون‌های ریز نمرات روزنبرگ
+                    ...bodyImageColumns, // ستون‌های ریز نمرات تصویر بدنی
+                    
+                    // ستون‌های طلایی برای تحلیل آماری
+                    TOTAL_Self_Esteem: rosenbergScore,
+                    TOTAL_Body_Image: bodyImageSum,
+                    Body_Image_Mean: (bodyImageSum / 15).toFixed(2) // میانگین
+                };
+            });
+
+            // 3. تولید اکسل
+            const worksheet = XLSX.utils.json_to_sheet(processedData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Responses");
+
+            // 4. دانلود
+            XLSX.writeFile(workbook, "Thesis_Data_WebLegend.xlsx");
+            status.innerText = 'دانلود با موفقیت انجام شد! ✅';
+        }
+    </script>
+</body>
+</html>
